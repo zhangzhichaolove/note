@@ -20,7 +20,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "types": ["element-plus/global"],
+    "baseUrl": ".", // 设置基路径为 tsconfig.json 所在目录
+    "paths": {
+      "@/*": ["src/*"] // 将 @ 开头的路径映射到 src 目录
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
 }
