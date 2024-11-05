@@ -6,47 +6,105 @@ import {
   FormInstance,
   DialogInstance,
 } from "element-plus";
-import { Plus, Close, Delete } from "@element-plus/icons-vue";
+import { Close, Edit } from "@element-plus/icons-vue";
 
 interface RuleForm {
+  id?: number;
   title: string;
   url: string;
   describe: string;
+  isEdit?: boolean;
+  classId?: number;
+  className?: string;
+}
+
+interface GroupRuleForm {
+  id?: number;
+  name: string;
+  isEdit?: boolean;
 }
 
 const isEdit = ref(false);
 const addMarkVisible = ref(false);
+const addGroupVisible = ref(false);
 
 const deleteMark = () => {
-  if (isEdit.value) {
-    ElNotification({
-      title: "通知",
-      message: "删除成功",
-      type: "success",
-    });
-  }
-  isEdit.value = !isEdit.value;
+  ElNotification({
+    title: "通知",
+    message: "删除成功",
+    type: "success",
+  });
 };
 
-const markModel = reactive({
+const markModel = reactive<RuleForm>({
   title: "",
   url: "",
   describe: "",
+  isEdit: false,
 });
 
-const ruleFormRef = ref<FormInstance>();
+const groupModel = reactive<GroupRuleForm>({
+  name: "",
+  isEdit: false,
+});
 
 const markRules = reactive<FormRules<RuleForm>>({
+  className: [{ required: true, message: "请输入分类名称", trigger: "blur" }],
   title: [{ required: true, message: "请输入书签名称", trigger: "blur" }],
   url: [{ required: true, message: "请输入书签网址", trigger: "blur" }],
   describe: [{ required: false, message: "请输入书签描述", trigger: "blur" }],
 });
+
+const groupRules = reactive<FormRules<GroupRuleForm>>({
+  name: [{ required: true, message: "请输入分组名称", trigger: "blur" }],
+});
+
+const ruleFormRef = ref<FormInstance>();
+const grouopFormRef = ref<FormInstance>();
+
+const markDialogRef = ref<DialogInstance>();
+const grouopDialogRef = ref<DialogInstance>();
+const addMark = (mark: any) => {
+  markModel.classId = mark.id;
+  markModel.className = mark.name;
+  addMarkVisible.value = true;
+};
+
+const editMark = (item: RuleForm, mark: any) => {
+  markModel.id = item.id;
+  markModel.title = item.title;
+  markModel.url = item.url;
+  markModel.describe = item.describe;
+  markModel.isEdit = true;
+  markModel.classId = mark.id;
+  markModel.className = mark.name;
+  addMarkVisible.value = true;
+};
+
+const editGroup = (item: GroupRuleForm) => {
+  groupModel.name = item.name;
+  groupModel.isEdit = true;
+  addGroupVisible.value = true;
+};
 
 const submitMark = async (formEl: FormInstance | undefined) => {
   if (!formEl) return;
   await formEl.validate((valid, fields) => {
     if (valid) {
       console.log("submit!");
+      if (markModel.isEdit) {
+        const md = marks.value
+          .find((it) => it.id === markModel.classId)
+          ?.maeks.find((it) => it.id === markModel.id);
+        if (md) {
+          md.title = markModel.title;
+        }
+      } else {
+        marks.value
+          .find((it) => it.id === markModel.classId)
+          ?.maeks.push({ ...markModel, id: Math.random() });
+      }
+      addMarkVisible.value = false;
     } else {
       console.log("error submit!", fields);
     }
@@ -57,18 +115,58 @@ const resetMark = (formEl: FormInstance | undefined) => {
   if (!formEl) return;
   if (!markDialogRef) return;
   formEl.resetFields();
+  markModel.title = "";
+  markModel.url = "";
+  markModel.describe = "";
+  markModel.isEdit = false;
+  markModel.classId = undefined;
+  markModel.className = undefined;
   addMarkVisible.value = false;
   setTimeout(() => {
     markDialogRef.value && markDialogRef.value.resetPosition();
   }, 200);
 };
 
-const markDialogRef = ref<DialogInstance>();
+const submitGroup = async (formEl: FormInstance | undefined) => {
+  if (!formEl) return;
+  await formEl.validate((valid, fields) => {
+    if (valid) {
+      console.log("submit!");
+      if (groupModel.isEdit) {
+        const md = marks.value.find((it) => it.id === groupModel.id);
+        if (md) {
+          md.name = groupModel.name;
+        }
+      } else {
+        marks.value.push({
+          id: Math.random(),
+          name: groupModel.name,
+          maeks: [],
+        });
+      }
+      addGroupVisible.value = false;
+    } else {
+      console.log("error submit!", fields);
+    }
+  });
+};
+
+const resetGroup = (formEl: FormInstance | undefined) => {
+  if (!formEl) return;
+  if (!grouopDialogRef) return;
+  formEl.resetFields();
+  groupModel.name = "";
+  groupModel.isEdit = false;
+  addGroupVisible.value = false;
+  setTimeout(() => {
+    grouopDialogRef.value && grouopDialogRef.value.resetPosition();
+  }, 200);
+};
 
 const marks = ref([
   {
     id: 1,
-    class: "代码仓库",
+    name: "代码仓库",
     maeks: [
       {
         id: 1,
@@ -86,7 +184,7 @@ const marks = ref([
   },
   {
     id: 2,
-    class: "开发工具",
+    name: "开发工具",
     maeks: [
       {
         id: 1,
@@ -102,6 +200,11 @@ const marks = ref([
       },
     ],
   },
+  {
+    id: 3,
+    name: "家庭服务",
+    maeks: [],
+  },
 ]);
 const change = (e: any, item: any) => {
   console.log(e, item);
@@ -113,46 +216,89 @@ const change = (e: any, item: any) => {
     <el-col :span="20">
       <div>
         <el-button
-          type="primary"
-          :icon="Plus"
-          circle
-          @click="addMarkVisible = true"
-        />
-        <el-button type="danger" :icon="Delete" circle @click="deleteMark" />
-        <el-button
           type="success"
           :icon="Close"
           circle
+          v-if="isEdit"
           @click="isEdit = !isEdit"
-          v-show="isEdit"
+        />
+        <el-button
+          type="primary"
+          :icon="Edit"
+          circle
+          v-else
+          @click="isEdit = !isEdit"
         />
       </div>
       <div v-for="mark in marks" :key="mark.id">
-        <h2 :id="mark.class">{{ mark.class }}</h2>
+        <div class="edit-container edit-title">
+          <span class="mark-title" :id="mark.name">{{ mark.name }}</span>
+          <div class="edit-btn-container">
+            <el-button
+              type="success"
+              link
+              @click="editGroup(mark)"
+              v-show="isEdit"
+              >修改</el-button
+            >
+            <el-button type="danger" link v-show="isEdit" @click="deleteMark"
+              >删除</el-button
+            >
+          </div>
+        </div>
         <div class="mark-list">
           <div v-for="item in mark.maeks" class="mark-item">
             <el-tooltip effect="dark" :content="item.describe" placement="top">
               <div class="mark-item-title">
-                <a :href="item.url" target="_blank">{{ item.title }}</a>
+                <div class="edit-container">
+                  <a :href="item.url" target="_blank">{{ item.title }}</a>
+                  <div class="edit-btn-container">
+                    <el-button
+                      type="success"
+                      link
+                      @click="editMark(item, mark)"
+                      v-show="isEdit"
+                      >修改</el-button
+                    >
+                    <el-button
+                      type="danger"
+                      link
+                      v-show="isEdit"
+                      @click="deleteMark"
+                      >删除</el-button
+                    >
+                  </div>
+                </div>
                 <el-checkbox
                   class="mark-item-checkbox"
                   label=""
                   :value="false"
-                  v-if="isEdit"
+                  v-if="false"
                   @change="change($event, item)"
                 /> 
               </div>
             </el-tooltip>
           </div>
+          <el-button type="warning" link @click="addMark(mark)" v-show="isEdit"
+            >添加</el-button
+          >
         </div>
       </div>
+      <el-button
+        class="add-group"
+        type="success"
+        v-show="isEdit"
+        round
+        @click="addGroupVisible = true"
+        >添加分组</el-button
+      >
     </el-col>
     <el-col :span="4">
       <div class="anchor-container">
         <el-anchor direction="vertical" type="default" :offset="0">
           <el-anchor-link
-            :href="`#${mark.class}`"
-            :title="mark.class"
+            :href="`#${mark.name}`"
+            :title="mark.name"
             v-for="mark in marks"
             :key="mark.id"
           />
@@ -163,12 +309,15 @@ const change = (e: any, item: any) => {
   <el-dialog
     ref="markDialogRef"
     v-model="addMarkVisible"
-    title="添加标签"
+    :title="markModel?.isEdit ? '修改标签' : '添加标签'"
     width="500"
     @close="resetMark(ruleFormRef)"
     draggable
   >
     <el-form :model="markModel" :rules="markRules" ref="ruleFormRef">
+      <el-form-item label="分类名称" prop="className">
+        <el-input v-model="markModel.className" autocomplete="off" disabled />
+      </el-form-item>
       <el-form-item label="标签名称" prop="title">
         <el-input v-model="markModel.title" autocomplete="off" />
       </el-form-item>
@@ -181,9 +330,31 @@ const change = (e: any, item: any) => {
     </el-form>
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="resetMark(ruleFormRef)">取消</el-button>
+        <el-button @click="addMarkVisible = false">取消</el-button>
         <el-button type="primary" @click="submitMark(ruleFormRef)">
-          添加
+          {{ markModel?.isEdit ? "修改" : "添加" }}
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
+  <el-dialog
+    ref="grouopDialogRef"
+    v-model="addGroupVisible"
+    :title="groupModel.isEdit ? '修改分组' : '添加分组'"
+    width="500"
+    @close="resetGroup(grouopFormRef)"
+    draggable
+  >
+    <el-form :model="groupModel" :rules="groupRules" ref="grouopFormRef">
+      <el-form-item label="分组名称" prop="name">
+        <el-input v-model="groupModel.name" autocomplete="off" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="addGroupVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitGroup(grouopFormRef)">
+          {{ groupModel?.isEdit ? "修改" : "添加" }}
         </el-button>
       </div>
     </template>
@@ -218,5 +389,24 @@ const change = (e: any, item: any) => {
 .el-anchor {
   width: fit-content;
   background-color: transparent;
+}
+.mark-title {
+  font-size: x-large;
+  font-weight: bold;
+}
+.edit-title {
+  margin: 15px 0;
+}
+.edit-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.edit-btn-container {
+  display: flex;
+  flex-direction: row;
+}
+.add-group {
+  margin-top: 20px;
 }
 </style>
