@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import {
   ElNotification,
   FormRules,
@@ -7,6 +7,7 @@ import {
   DialogInstance,
 } from "element-plus";
 import { Close, Edit } from "@element-plus/icons-vue";
+import axiosInstance from "@/request";
 
 interface RuleForm {
   id?: number;
@@ -24,17 +25,23 @@ interface GroupRuleForm {
   isEdit?: boolean;
 }
 
+type MarkType = {
+  id: number;
+  url: string;
+  title: string;
+  describe: string;
+};
+
+type MarkDataType = {
+  id: number;
+  name: string;
+  marks: MarkType[];
+};
+
+const marks = ref<MarkDataType[]>([]);
 const isEdit = ref(false);
 const addMarkVisible = ref(false);
 const addGroupVisible = ref(false);
-
-const deleteMark = () => {
-  ElNotification({
-    title: "通知",
-    message: "删除成功",
-    type: "success",
-  });
-};
 
 const markModel = reactive<RuleForm>({
   title: "",
@@ -82,6 +89,7 @@ const editMark = (item: RuleForm, mark: any) => {
 };
 
 const editGroup = (item: GroupRuleForm) => {
+  groupModel.id = item.id;
   groupModel.name = item.name;
   groupModel.isEdit = true;
   addGroupVisible.value = true;
@@ -91,18 +99,24 @@ const submitMark = async (formEl: FormInstance | undefined) => {
   if (!formEl) return;
   await formEl.validate((valid, fields) => {
     if (valid) {
-      console.log("submit!");
       if (markModel.isEdit) {
-        const md = marks.value
-          .find((it) => it.id === markModel.classId)
-          ?.maeks.find((it) => it.id === markModel.id);
-        if (md) {
-          md.title = markModel.title;
-        }
+        axiosInstance.put("/api/editMark", markModel).then(() => {
+          ElNotification({
+            title: "通知",
+            message: "修改成功",
+            type: "success",
+          });
+          getMarkList();
+        });
       } else {
-        marks.value
-          .find((it) => it.id === markModel.classId)
-          ?.maeks.push({ ...markModel, id: Math.random() });
+        axiosInstance.post("/api/addMark", markModel).then(() => {
+          ElNotification({
+            title: "通知",
+            message: "添加成功",
+            type: "success",
+          });
+          getMarkList();
+        });
       }
       addMarkVisible.value = false;
     } else {
@@ -131,18 +145,28 @@ const submitGroup = async (formEl: FormInstance | undefined) => {
   if (!formEl) return;
   await formEl.validate((valid, fields) => {
     if (valid) {
-      console.log("submit!");
       if (groupModel.isEdit) {
-        const md = marks.value.find((it) => it.id === groupModel.id);
-        if (md) {
-          md.name = groupModel.name;
-        }
+        axiosInstance
+          .put("/api/editGroup", { id: groupModel.id, name: groupModel.name })
+          .then(() => {
+            ElNotification({
+              title: "通知",
+              message: "修改成功",
+              type: "success",
+            });
+            getMarkList();
+          });
       } else {
-        marks.value.push({
-          id: Math.random(),
-          name: groupModel.name,
-          maeks: [],
-        });
+        axiosInstance
+          .post("/api/addGroup", { name: groupModel.name })
+          .then(() => {
+            ElNotification({
+              title: "通知",
+              message: "添加成功",
+              type: "success",
+            });
+            getMarkList();
+          });
       }
       addGroupVisible.value = false;
     } else {
@@ -163,52 +187,39 @@ const resetGroup = (formEl: FormInstance | undefined) => {
   }, 200);
 };
 
-const marks = ref([
-  {
-    id: 1,
-    name: "代码仓库",
-    maeks: [
-      {
-        id: 1,
-        url: "https://github.com",
-        title: "github",
-        describe: "github代码仓库",
-      },
-      {
-        id: 2,
-        url: "https://gitee.com",
-        title: "gitee",
-        describe: "gitee代码仓库",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "开发工具",
-    maeks: [
-      {
-        id: 1,
-        url: "https://zhile.io",
-        title: "zhile",
-        describe: "JetBrains破解大佬博客",
-      },
-      {
-        id: 2,
-        url: "https://3.jetbra.in/",
-        title: "jetbra",
-        describe: "jetbra在线激活码地址检测",
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "家庭服务",
-    maeks: [],
-  },
-]);
+const deleteGroup = (item: any) => {
+  axiosInstance
+    .delete("/api/deleteGroup", { params: { id: item.id } })
+    .then(() => {
+      ElNotification({
+        title: "通知",
+        message: "删除成功",
+        type: "success",
+      });
+      getMarkList();
+    });
+};
+const deleteMark = (item: any) => {
+  axiosInstance
+    .delete("/api/deleteMark", { params: { id: item.id } })
+    .then(() => {
+      ElNotification({
+        title: "通知",
+        message: "删除成功",
+        type: "success",
+      });
+      getMarkList();
+    });
+};
 const change = (e: any, item: any) => {
   console.log(e, item);
 };
+const getMarkList = () => {
+  axiosInstance.get("/api/markList").then((data: any) => {
+    marks.value = data.result;
+  });
+};
+onMounted(getMarkList);
 </script>
 
 <template>
@@ -241,13 +252,17 @@ const change = (e: any, item: any) => {
               v-show="isEdit"
               >修改</el-button
             >
-            <el-button type="danger" link v-show="isEdit" @click="deleteMark"
+            <el-button
+              type="danger"
+              link
+              v-show="isEdit"
+              @click="deleteGroup(mark)"
               >删除</el-button
             >
           </div>
         </div>
         <div class="mark-list">
-          <div v-for="item in mark.maeks" class="mark-item">
+          <div v-for="item in mark.marks" class="mark-item">
             <el-tooltip effect="dark" :content="item.describe" placement="top">
               <div class="mark-item-title">
                 <div class="edit-container">
@@ -264,7 +279,7 @@ const change = (e: any, item: any) => {
                       type="danger"
                       link
                       v-show="isEdit"
-                      @click="deleteMark"
+                      @click="deleteMark(item)"
                       >删除</el-button
                     >
                   </div>

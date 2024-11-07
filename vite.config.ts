@@ -19,5 +19,17 @@ export default defineConfig({
     alias: {
       '@': path.resolve('./src'),
     }
+  },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:80/api",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+        headers: {
+          'Referer': 'http://localhost:80'
+        }
+      },
+    },
   }
 })
