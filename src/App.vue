@@ -6,21 +6,14 @@ const isCollapse = ref(false);
 </script>
 
 <template>
-  <el-container>
-    <el-aside width="200px">
+  <el-container class="app-container">
+    <el-aside width="200px" class="fixed-aside">
       <el-radio-group v-model="isCollapse" style="margin-bottom: 20px">
         <el-radio-button :value="false">展开</el-radio-button>
         <el-radio-button :value="true">折叠</el-radio-button>
       </el-radio-group>
-      <el-menu
-        router
-        default-active="/"
-        class="el-menu-vertical-left"
-        :collapse="isCollapse"
-        active-text-color="#f00"
-        text-color="#ccc"
-        background-color="#242424"
-      >
+      <el-menu router default-active="/" class="el-menu-vertical-left" :collapse="isCollapse" active-text-color="#f00"
+        text-color="#ccc" background-color="#242424">
         <el-sub-menu index="/">
           <template #title>
             <el-icon><icon-menu /></el-icon>
@@ -33,16 +26,31 @@ const isCollapse = ref(false);
         </el-sub-menu>
       </el-menu>
     </el-aside>
-    <el-main>
+    <el-main class="main-content">
       <RouterView />
     </el-main>
   </el-container>
 </template>
 
 <style scoped>
+.app-container {
+  min-height: 100vh;
+}
+
+.fixed-aside {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+  background-color: #242424;
+}
+
+.main-content {
+  margin-left: 200px;
+}
+
 .el-menu-vertical-left:not(.el-menu--collapse) {
   border-right: 0;
-  /* width: 200px;
-  min-height: 400px; */
 }
 </style>
