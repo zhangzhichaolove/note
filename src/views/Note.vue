@@ -140,7 +140,7 @@ onMounted(getNoteList)
     </div>
 
     <el-dialog v-model="dialogVisible" :title="'便签详情'" width="50%">
-      <p>{{ currentNote?.content }}</p>
+      <div class="note-detail-content">{{ currentNote?.content }}</div>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">关闭</el-button>
@@ -186,14 +186,17 @@ onMounted(getNoteList)
 }
 
 .waterfall {
-  column-count: 3;
-  column-gap: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
 }
 
 .note-card {
   break-inside: avoid;
   margin-bottom: 20px;
+  margin-right: 20px;
   cursor: pointer;
+  max-width: 400px;
 }
 
 .note-content {
@@ -233,5 +236,13 @@ onMounted(getNoteList)
   height: 50px;
   font-size: 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.note-detail-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.6;
+  padding: 10px 0;
+  text-align: left;
 }
 </style>
