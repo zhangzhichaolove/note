@@ -1,52 +1,18 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Delete, Edit, Plus } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import axiosInstance from '@/request'
 
 interface NoteItem {
   id: number
   content: string
   createdAt: string
+  updatedAt: string
+  deletedAt?: string
 }
 
-const notes = ref<NoteItem[]>([
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-  { id: 1, content: '这是第一条便签内容，可以很长很长...', createdAt: '2024-01-10' },
-  { id: 2, content: '第二条便签，内容较短', createdAt: '2024-01-11' },
-  { id: 3, content: '第三条便签内容，包含一些重要信息...', createdAt: '2024-01-12' },
-])
+const notes = ref<NoteItem[]>([])
 
 const dialogVisible = ref(false)
 const editDialogVisible = ref(false)
@@ -69,17 +35,18 @@ const handleAddSubmit = () => {
     return
   }
 
-  const maxId = Math.max(...notes.value.map(note => note.id), 0)
-  const newNote: NoteItem = {
-    id: maxId + 1,
-    content: addForm.content,
-    createdAt: new Date().toISOString().split('T')[0]
-  }
-
-  notes.value.unshift(newNote)
-  addForm.content = ''
-  addDialogVisible.value = false
-  ElMessage.success('添加成功')
+  axiosInstance.post('/api/addNote', { content: addForm.content }).then(() => {
+    ElNotification({
+      title: '通知',
+      message: '添加成功',
+      type: 'success',
+    })
+    getNoteList()
+    addForm.content = ''
+    addDialogVisible.value = false
+  }).catch(() => {
+    ElMessage.error('添加失败')
+  })
 }
 
 const showNoteDetail = (note: NoteItem) => {
@@ -100,15 +67,20 @@ const handleEditSubmit = () => {
   }
 
   if (currentNote.value) {
-    const index = notes.value.findIndex(n => n.id === currentNote.value?.id)
-    if (index !== -1) {
-      notes.value[index] = {
-        ...notes.value[index],
-        content: editForm.content,
-      }
-      ElMessage.success('编辑成功')
+    axiosInstance.put('/api/editNote', {
+      id: currentNote.value.id,
+      content: editForm.content
+    }).then(() => {
+      ElNotification({
+        title: '通知',
+        message: '修改成功',
+        type: 'success',
+      })
+      getNoteList()
       editDialogVisible.value = false
-    }
+    }).catch(() => {
+      ElMessage.error('修改失败')
+    })
   }
 }
 
@@ -122,15 +94,32 @@ const handleDelete = (note: NoteItem) => {
       type: 'warning',
     }
   ).then(() => {
-    const index = notes.value.findIndex(n => n.id === note.id)
-    if (index !== -1) {
-      notes.value.splice(index, 1)
-      ElMessage.success('删除成功')
-    }
+    axiosInstance.delete('/api/deleteNote', {
+      params: { id: note.id }
+    }).then(() => {
+      ElNotification({
+        title: '通知',
+        message: '删除成功',
+        type: 'success',
+      })
+      getNoteList()
+    }).catch(() => {
+      ElMessage.error('删除失败')
+    })
   }).catch(() => {
     // 取消删除
   })
 }
+
+const getNoteList = () => {
+  axiosInstance.get('/api/noteList').then((data: any) => {
+    notes.value = data.result
+  }).catch(() => {
+    ElMessage.error('获取便签列表失败')
+  })
+}
+
+onMounted(getNoteList)
 </script>
 
 <template>
@@ -161,8 +150,8 @@ const handleDelete = (note: NoteItem) => {
 
     <el-dialog v-model="editDialogVisible" :title="'编辑便签'" width="50%">
       <el-form>
-        <el-form-item label="内容">
-          <el-input v-model="editForm.content" type="textarea" :rows="4" placeholder="请输入便签内容" />
+        <el-form-item>
+          <el-input v-model="editForm.content" type="textarea" :rows="20" placeholder="请输入便签内容" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -175,8 +164,8 @@ const handleDelete = (note: NoteItem) => {
 
     <el-dialog v-model="addDialogVisible" :title="'新增便签'" width="50%">
       <el-form>
-        <el-form-item label="内容">
-          <el-input v-model="addForm.content" type="textarea" :rows="4" placeholder="请输入便签内容" />
+        <el-form-item>
+          <el-input v-model="addForm.content" type="textarea" :rows="20" placeholder="请输入便签内容" />
         </el-form-item>
       </el-form>
       <template #footer>
