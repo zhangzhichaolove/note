@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRoute } from "vue-router";
 import { Menu as IconMenu } from "@element-plus/icons-vue";
 
 const isCollapse = ref(false);
+const route = useRoute();
 </script>
 
 <template>
@@ -12,7 +14,7 @@ const isCollapse = ref(false);
         <el-radio-button :value="false">展开</el-radio-button>
         <el-radio-button :value="true">折叠</el-radio-button>
       </el-radio-group>
-      <el-menu router default-active="/" class="el-menu-vertical-left" :collapse="isCollapse" active-text-color="#f00"
+      <el-menu router :default-active="route.path" class="el-menu-vertical-left" :collapse="isCollapse" active-text-color="#f00"
         text-color="#ccc" background-color="#242424">
         <el-sub-menu index="/">
           <template #title>
