@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { onMounted, onUnmounted, reactive, ref } from "vue";
 import {
   ElNotification,
   FormRules,
@@ -42,6 +42,12 @@ const marks = ref<MarkDataType[]>([]);
 const isEdit = ref(false);
 const addMarkVisible = ref(false);
 const addGroupVisible = ref(false);
+const isMobile = ref(false);
+
+// 检测是否为移动设备
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768;
+};
 
 const markModel = reactive<RuleForm>({
   title: "",
@@ -219,46 +225,31 @@ const getMarkList = () => {
     marks.value = data.result;
   });
 };
-onMounted(getMarkList);
+
+onMounted(() => {
+  getMarkList();
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile);
+});
 </script>
 
 <template>
-  <el-row>
-    <el-col :span="20">
+  <el-row :gutter="20">
+    <el-col :xs="24" :sm="24" :md="20" :lg="20" :xl="20">
       <div>
-        <el-button
-          type="success"
-          :icon="Close"
-          circle
-          v-if="isEdit"
-          @click="isEdit = !isEdit"
-        />
-        <el-button
-          type="primary"
-          :icon="Edit"
-          circle
-          v-else
-          @click="isEdit = !isEdit"
-        />
+        <el-button type="success" :icon="Close" circle v-if="isEdit" @click="isEdit = !isEdit" />
+        <el-button type="primary" :icon="Edit" circle v-else @click="isEdit = !isEdit" />
       </div>
       <div v-for="mark in marks" :key="mark.id">
         <div class="edit-container edit-title">
           <span class="mark-title" :id="mark.name">{{ mark.name }}</span>
           <div class="edit-btn-container">
-            <el-button
-              type="success"
-              link
-              @click="editGroup(mark)"
-              v-show="isEdit"
-              >修改</el-button
-            >
-            <el-button
-              type="danger"
-              link
-              v-show="isEdit"
-              @click="deleteGroup(mark)"
-              >删除</el-button
-            >
+            <el-button type="success" link @click="editGroup(mark)" v-show="isEdit">修改</el-button>
+            <el-button type="danger" link v-show="isEdit" @click="deleteGroup(mark)">删除</el-button>
           </div>
         </div>
         <div class="mark-list">
@@ -268,67 +259,30 @@ onMounted(getMarkList);
                 <div class="edit-container">
                   <a :href="item.url" target="_blank">{{ item.title }}</a>
                   <div class="edit-btn-container">
-                    <el-button
-                      type="success"
-                      link
-                      @click="editMark(item, mark)"
-                      v-show="isEdit"
-                      >修改</el-button
-                    >
-                    <el-button
-                      type="danger"
-                      link
-                      v-show="isEdit"
-                      @click="deleteMark(item)"
-                      >删除</el-button
-                    >
+                    <el-button type="success" link @click="editMark(item, mark)" v-show="isEdit">修改</el-button>
+                    <el-button type="danger" link v-show="isEdit" @click="deleteMark(item)">删除</el-button>
                   </div>
                 </div>
-                <el-checkbox
-                  class="mark-item-checkbox"
-                  label=""
-                  :value="false"
-                  v-if="false"
-                  @change="change($event, item)"
-                /> 
+                <el-checkbox class="mark-item-checkbox" label="" :value="false" v-if="false"
+                  @change="change($event, item)" /> 
               </div>
             </el-tooltip>
           </div>
-          <el-button type="warning" link @click="addMark(mark)" v-show="isEdit"
-            >添加</el-button
-          >
+          <el-button type="warning" link @click="addMark(mark)" v-show="isEdit">添加</el-button>
         </div>
       </div>
-      <el-button
-        class="add-group"
-        type="success"
-        v-show="isEdit"
-        round
-        @click="addGroupVisible = true"
-        >添加分组</el-button
-      >
+      <el-button class="add-group" type="success" v-show="isEdit" round @click="addGroupVisible = true">添加分组</el-button>
     </el-col>
-    <el-col :span="4">
+    <el-col :xs="0" :sm="0" :md="4" :lg="4" :xl="4">
       <div class="anchor-container">
         <el-anchor direction="vertical" type="default" :offset="0">
-          <el-anchor-link
-            :href="`#${mark.name}`"
-            :title="mark.name"
-            v-for="mark in marks"
-            :key="mark.id"
-          />
+          <el-anchor-link :href="`#${mark.name}`" :title="mark.name" v-for="mark in marks" :key="mark.id" />
         </el-anchor>
       </div>
     </el-col>
   </el-row>
-  <el-dialog
-    ref="markDialogRef"
-    v-model="addMarkVisible"
-    :title="markModel?.isEdit ? '修改标签' : '添加标签'"
-    width="500"
-    @close="resetMark(ruleFormRef)"
-    draggable
-  >
+  <el-dialog ref="markDialogRef" v-model="addMarkVisible" :title="markModel?.isEdit ? '修改标签' : '添加标签'"
+    :width="isMobile ? '90%' : '500px'" @close="resetMark(ruleFormRef)" draggable>
     <el-form :model="markModel" :rules="markRules" ref="ruleFormRef">
       <el-form-item label="分类名称" prop="className">
         <el-input v-model="markModel.className" autocomplete="off" disabled />
@@ -352,14 +306,8 @@ onMounted(getMarkList);
       </div>
     </template>
   </el-dialog>
-  <el-dialog
-    ref="grouopDialogRef"
-    v-model="addGroupVisible"
-    :title="groupModel.isEdit ? '修改分组' : '添加分组'"
-    width="500"
-    @close="resetGroup(grouopFormRef)"
-    draggable
-  >
+  <el-dialog ref="grouopDialogRef" v-model="addGroupVisible" :title="groupModel.isEdit ? '修改分组' : '添加分组'"
+    :width="isMobile ? '90%' : '500px'" @close="resetGroup(grouopFormRef)" draggable>
     <el-form :model="groupModel" :rules="groupRules" ref="grouopFormRef">
       <el-form-item label="分组名称" prop="name">
         <el-input v-model="groupModel.name" autocomplete="off" />
@@ -374,7 +322,6 @@ onMounted(getMarkList);
       </div>
     </template>
   </el-dialog>
-  <el-backtop :right="50" :bottom="50" />
 </template>
 
 <style scoped>
@@ -385,43 +332,87 @@ onMounted(getMarkList);
   border-radius: 5px;
   padding: 10px;
 }
+
 .mark-item {
   margin: 0 10px;
 }
+
 .mark-item-title {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
+
 .mark-item-checkbox {
   margin-left: 5px;
 }
+
 .anchor-container {
   display: flex;
   flex-direction: row;
   justify-content: center;
 }
+
 .el-anchor {
   width: fit-content;
   background-color: transparent;
 }
+
 .mark-title {
   font-size: x-large;
   font-weight: bold;
 }
+
 .edit-title {
   margin: 15px 0;
 }
+
 .edit-container {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+
 .edit-btn-container {
   display: flex;
   flex-direction: row;
 }
+
 .add-group {
   margin-top: 20px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .mark-list {
+    flex-direction: column;
+    padding: 8px;
+  }
+
+  .mark-item {
+    margin: 5px 0;
+  }
+
+  .mark-item-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .edit-container {
+    align-items: flex-start;
+  }
+
+  .edit-btn-container {
+    margin-top: 8px;
+  }
+
+  .mark-title {
+    font-size: large;
+  }
+
+  .edit-title {
+    margin: 10px 0;
+  }
 }
 </style>

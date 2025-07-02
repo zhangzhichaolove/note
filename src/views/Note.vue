@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { Delete, Edit, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import axiosInstance from '@/request'
@@ -24,6 +24,13 @@ const editForm = reactive({
 const addForm = reactive({
   content: ''
 })
+
+const isMobile = ref(false)
+
+// 检测是否为移动设备
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
 
 const handleAdd = () => {
   addDialogVisible.value = true
@@ -119,11 +126,20 @@ const getNoteList = () => {
   })
 }
 
-onMounted(getNoteList)
+onMounted(() => {
+  getNoteList()
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 </script>
 
 <template>
   <div class="note-container">
+    <el-button class="add-button" type="primary" :icon="Plus" circle @click="handleAdd" />
     <div class="waterfall">
       <el-card v-for="note in notes" :key="note.id" class="note-card" shadow="hover" @click="showNoteDetail(note)">
         <div class="note-content">
@@ -139,7 +155,7 @@ onMounted(getNoteList)
       </el-card>
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="'便签详情'" width="50%">
+    <el-dialog v-model="dialogVisible" :title="'便签详情'" :width="isMobile ? '95%' : '50%'">
       <div class="note-detail-content">{{ currentNote?.content }}</div>
       <template #footer>
         <span class="dialog-footer">
@@ -148,10 +164,10 @@ onMounted(getNoteList)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editDialogVisible" :title="'编辑便签'" width="50%">
+    <el-dialog v-model="editDialogVisible" :title="'编辑便签'" :width="isMobile ? '95%' : '50%'">
       <el-form>
         <el-form-item>
-          <el-input v-model="editForm.content" type="textarea" :rows="20" placeholder="请输入便签内容" />
+          <el-input v-model="editForm.content" type="textarea" :rows="isMobile ? 15 : 20" placeholder="请输入便签内容" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -162,10 +178,10 @@ onMounted(getNoteList)
       </template>
     </el-dialog>
 
-    <el-dialog v-model="addDialogVisible" :title="'新增便签'" width="50%">
+    <el-dialog v-model="addDialogVisible" :title="'新增便签'" :width="isMobile ? '95%' : '50%'">
       <el-form>
         <el-form-item>
-          <el-input v-model="addForm.content" type="textarea" :rows="20" placeholder="请输入便签内容" />
+          <el-input v-model="addForm.content" type="textarea" :rows="isMobile ? 15 : 20" placeholder="请输入便签内容" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -175,8 +191,6 @@ onMounted(getNoteList)
         </span>
       </template>
     </el-dialog>
-
-    <el-button class="add-button" type="primary" :icon="Plus" circle @click="handleAdd" />
   </div>
 </template>
 
@@ -189,14 +203,16 @@ onMounted(getNoteList)
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
+  gap: 20px;
 }
 
 .note-card {
   break-inside: avoid;
   margin-bottom: 20px;
-  margin-right: 20px;
   cursor: pointer;
   max-width: 400px;
+  flex: 1;
+  min-width: 280px;
 }
 
 .note-content {
@@ -229,13 +245,11 @@ onMounted(getNoteList)
 }
 
 .add-button {
-  position: fixed;
-  right: 40px;
-  bottom: 40px;
   width: 50px;
   height: 50px;
   font-size: 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .note-detail-content {
@@ -244,5 +258,67 @@ onMounted(getNoteList)
   line-height: 1.6;
   padding: 10px 0;
   text-align: left;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .note-container {
+    padding: 10px;
+  }
+
+  .waterfall {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .note-card {
+    max-width: 100%;
+    min-width: auto;
+    margin-bottom: 0;
+    margin-right: 0;
+  }
+
+  .note-content {
+    -webkit-line-clamp: 4;
+  }
+
+  .actions {
+    opacity: 1;
+  }
+
+  .add-button {
+    right: 20px;
+    bottom: 20px;
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+
+  .note-detail-content {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .note-container {
+    padding: 8px;
+  }
+
+  .waterfall {
+    gap: 12px;
+  }
+
+  .note-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: auto;
+  }
+
+  .actions {
+    align-self: flex-end;
+  }
 }
 </style>
